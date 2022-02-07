@@ -22,6 +22,7 @@ class Simulator:
                     init_angacc,
                     init_tvcang):
 
+        # init datas
         self.dt = dt
         self.time = 0
         self.m0,self.mf = m0,mf
@@ -88,9 +89,10 @@ class Simulator:
             
             """ Considering Thrust ====================================================="""
 
-            if self.time > self.t_b:
-                # No thrust after burn out
+            if self.time > self.t_b: # No thrust after burn out
+                
                 Thrust_body = np.array([0,0,0])    
+
             else:  
                 # Calculate Thrust vector in Body-Frame
                 Thrust_body = np.array([np.cos(self.tvcang[0])*np.cos(self.tvcang[1]),
@@ -120,21 +122,37 @@ class Simulator:
             
             """ Considering Drag ====================================================="""
 
-            if np.linalg.norm(self.vel) == 0:
+            if np.linalg.norm(self.vel) == 0: # exception for preveting "divided by zero error"
 
                 Drag = np.zeros(3)
                 Torque_by_drag = np.zeros(3)    
 
             else:
                 
-                # Force by Drag
+                # Force by Drag ======================================================
+
+                # effective area is the area of the projection to the plane perpandicular to v vector
+                # calculate the angle between v and r
                 ang_v_r = np.arccos((self.vel @ c2t)/(np.linalg.norm(self.vel)*(np.linalg.norm(c2t))))
 
-                A_effect = ( self.L * self.D ) * np.sin(ang_v_r)
+                A_effect = ( self.L * self.D ) * np.sin(ang_v_r) 
 
+                # calculate the drag applied on the center of gravity
                 Drag = - self.k * np.linalg.norm(self.vel) * A_effect * self.vel 
 
-                # Torque by Drag
+                # Torque by Drag =====================================================
+
+                # Drag is Distributed Force
+                # but we assumes that the Drag is applied on the top, center, bottom of the rocket.
+                # then, the torque by the Drag can be simplified to
+                # the torque by two forces applied on the top and bottom
+                '''
+                τ = r X F
+            
+                F = - k^2 A |v|^2 v
+            
+                v = ω X r + v_cog
+                '''
                 v_top = self.vel + np.cross(self.angvel , c2t)
                 v_bot = self.vel + np.cross(self.angvel , c2b)
 
@@ -153,6 +171,12 @@ class Simulator:
             self.att = self.att + self.angvel * self.dt + 0.5 * self.angacc * (self.dt**2)
             self.angvel = self.angvel + self.angacc * self.dt
 
+            if self.pos[2] <= 0:
+                self.acc = np.zeros(3)
+                self.vel = np.zeros(3)
+                self.angvel = np.zeros(3)
+                self.angacc = np.zeros(3)
+
             
 
             pos_hist = np.vstack((pos_hist,self.pos)) 
@@ -162,11 +186,12 @@ class Simulator:
             angvel_hist = np.vstack((angvel_hist,self.angvel)) 
             angacc_hist = np.vstack((angacc_hist,self.angacc)) 
 
-            if self.time >= 20:
+            if self.time >= 50:
                 break
         
         
         self.vz.run(pos_hist[1:,:], att_hist[1:,:])
+        
         """
         position = plt.subplot(3,2,1)
         velocity = plt.subplot(3,2,3)
@@ -218,8 +243,6 @@ class Simulator:
         plt.show()
         """
 
-
-
 if __name__ == "__main__":
     dt = 0.1
     m0 = 2
@@ -230,7 +253,7 @@ if __name__ == "__main__":
     L = 2
     D = 0.2
     thrust = np.array([1,2,3,4,5,6,7,8,9,10,10,10,8,6,4,2,0,0,0,0])*30
-    k = 0.1
+    k = 0.02
     init_pos = np.array([0,0,0])
     init_vel = np.array([0,0,0])
     init_acc = np.array([0,0,0])
