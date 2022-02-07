@@ -1,6 +1,9 @@
+from struct import pack
 import numpy as np
 import matplotlib.pyplot as plt
+import rospy
 
+from std_msgs.msg import Float32MultiArray
 from transform import Transformer
 from visualize import Visualizer
 
@@ -39,9 +42,14 @@ class Simulator:
         self.angacc = init_angacc
         self.tvcang = init_tvcang
         
-        
+        # load the modules for transformation and visualizing
         self.tf = Transformer()
         self.vz = Visualizer(self)
+
+        # init publisher node as a sensor
+        rospy.init_node("Sensor")
+        self.sensors = rospy.Publisher("sensor_data",Float32MultiArray, queue_size=1) 
+
 
     def mass(self,t):
         if self.time <= self.t_b:
@@ -177,7 +185,12 @@ class Simulator:
                 self.angvel = np.zeros(3)
                 self.angacc = np.zeros(3)
 
-            
+            # packing sensor datas to a single 1-dim array
+            packed_data = np.hstack((self.pos,self.vel,self.att,self.angvel,self.angacc))
+            # publishing sensor datas in every interations
+            sensor_datas = Float32MultiArray()
+            sensor_datas.data = packed_data
+            self.sensors.publish(sensor_datas)
 
             pos_hist = np.vstack((pos_hist,self.pos)) 
             vel_hist = np.vstack((vel_hist,self.vel)) 
