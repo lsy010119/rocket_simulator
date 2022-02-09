@@ -17,6 +17,17 @@ class Sensor:
         self.angacc = 0
 
     def status_updater(self,sensor_datas):
-        print("received")
+        # print("received")
         print(sensor_datas.data)
 
+    def run(self):
+
+        rate = rospy.Rate(10)
+        while not rospy.is_shutdown():
+            rate.sleep()
+
+
+if __name__ == "__main__":
+
+    s = Sensor()
+    s.run()

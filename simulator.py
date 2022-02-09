@@ -47,9 +47,9 @@ class Simulator:
         self.vz = Visualizer(self)
 
         # init publisher node as a sensor
-        rospy.init_node("Sensor")
+        rospy.init_node("sensor")
         self.sensors = rospy.Publisher("sensor_data",Float32MultiArray, queue_size=1) 
-
+        self.rate = rospy.Rate(10)
 
     def mass(self,t):
         if self.time <= self.t_b:
@@ -87,7 +87,7 @@ class Simulator:
         angacc_hist = np.array([0,0,0])
         i = 0
 
-        while True:
+        while not rospy.is_shutdown():
 
             # update time and iterations
             self.time += self.dt
@@ -198,10 +198,11 @@ class Simulator:
             att_hist = np.vstack((att_hist,self.att)) 
             angvel_hist = np.vstack((angvel_hist,self.angvel)) 
             angacc_hist = np.vstack((angacc_hist,self.angacc)) 
-
-            if self.time >= 50:
+  
+            if self.time >= 10:  
                 break
-        
+            change 2
+            self.rate.sleep()
         
         self.vz.run(pos_hist[1:,:], att_hist[1:,:])
         
