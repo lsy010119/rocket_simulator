@@ -13,11 +13,11 @@ class Master:
         rospy.Subscriber('sensor_data',Float32MultiArray,self.status_updater)
         self.commander = rospy.Publisher("tvc_angle", Float32MultiArray,queue_size=1)
         
-        self.pos = 0
-        self.vel = 0
-        self.att = 0
-        self.angvel = 0
-        self.angacc = 0
+        self.pos = np.zeros(3)
+        self.vel = np.zeros(3)
+        self.att = np.zeros(3)
+        self.angvel = np.zeros(3)
+        self.angacc = np.zeros(3)
         self.is_burning = 0
         self.time = 0
 
@@ -33,11 +33,11 @@ class Master:
         self.angacc = sensor_datas.data[12:15]
         self.is_burning = sensor_datas.data[15]
         self.time = sensor_datas.data[16]
-        
+        print(self.pos[2],"                       ",end="\r")
 
     def run(self):
 
-        rate = rospy.Rate(20)
+        rate = rospy.Rate(30)
         
         pos_hist = np.array([0,0,0])
         vel_hist = np.array([0,0,0])
@@ -54,9 +54,12 @@ class Master:
             angvel_hist = np.vstack((angvel_hist,self.angvel)) 
             angacc_hist = np.vstack((angacc_hist,self.angacc)) 
             
-            if self.is_burning == 1:
+            # if self.is_burning == 1:
 
-                self.control_tvc()
+                # self.tvc.calculate_optimal_val(self.att,
+                #                                self.angvel,
+                #                                self.angacc,
+                #                                )
 
 
             rate.sleep()

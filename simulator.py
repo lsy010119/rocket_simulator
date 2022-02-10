@@ -2,6 +2,7 @@ from struct import pack
 import numpy as np
 import matplotlib.pyplot as plt
 import rospy
+import time
 
 from mpl_toolkits.mplot3d import axes3d, Axes3D
 from std_msgs.msg import Float32MultiArray
@@ -98,9 +99,10 @@ class Simulator:
         odometry_cog = self.pos
         odometry_bot = self.pos
 
-        
+
         # Ignite
         self.is_burning = 1
+        i = 0
 
         while not rospy.is_shutdown():
 
@@ -158,7 +160,7 @@ class Simulator:
                 # calculate the angle between v and r
                 ang_v_r = np.arccos((self.vel @ c2t)/(np.linalg.norm(self.vel)*(np.linalg.norm(c2t))))
 
-                A_effect = ( self.L * self.D ) * np.sin(ang_v_r) 
+                A_effect = abs(( self.L * self.D ) * np.sin(ang_v_r)) + abs(( np.pi * self.D**2 / 4 ) * np.cos(ang_v_r))
 
                 # calculate the drag applied on the center of gravity
                 Drag = - self.k * np.linalg.norm(self.vel) * A_effect * self.vel 
@@ -213,21 +215,21 @@ class Simulator:
             bot_pos = self.pos + T @ np.array([-0.5 * 5, 0 , 0])
 
             ax.cla()
-            ax.set_xlim(0,800)
-            ax.set_ylim(0,800)
-            ax.set_zlim(0,800)
+            ax.set_xlim(0,200)
+            ax.set_ylim(0,200)
+            ax.set_zlim(0,200)
             
             ax.quiver(bot_pos[0],bot_pos[1],bot_pos[2],
                        top_pos[0]-bot_pos[0],
                        top_pos[1]-bot_pos[1],
                        top_pos[2]-bot_pos[2],
-                       length=10,linewidth=3,arrow_length_ratio=0,color='black')
+                       length=2,linewidth=2,arrow_length_ratio=0,color='black')
             if self.is_burning == 1:
                 ax.quiver(bot_pos[0],bot_pos[1],bot_pos[2],
                         - 5*Thrust_xyz[0]/self.thrust[i-1],
                         - 5*Thrust_xyz[1]/self.thrust[i-1],
                         - 5*Thrust_xyz[2]/self.thrust[i-1],
-                       length=10,linewidth=2,arrow_length_ratio=0,color='red')
+                       length=3,linewidth=1,arrow_length_ratio=0,color='red')
 
 
             odometry_top = np.vstack((odometry_top,top_pos))
@@ -242,6 +244,7 @@ class Simulator:
             plt.pause(0.01)
             self.rate.sleep()
         
+        plt.show()
 
 
 
@@ -249,24 +252,24 @@ class Simulator:
 
 if __name__ == "__main__":
     dt = 0.1
-    m0 = 2
-    mf = 2 - 0.400
-    t_b = 2
+    m0 = 6 + 0.150
+    mf = 6
     l_cog0 = 1
     l_cogf = 1.05
-    L = 2
-    D = 0.2
-    thrust = np.array([1,2,3,4,5,6,7,8,9,10,10,10,8,6,4,2,1,1,1,1])*30
-    k = 0.02
+    L = 1.2
+    D = 0.11
+    thrust = np.ones(20)*250
+    t_b = len(thrust) * dt
+    k = 0.15 # rho = 1.125 , Cd = 0.25
     init_pos = np.array([0,0,0])
     init_vel = np.array([0,0,0])
     init_acc = np.array([0,0,0])
-    init_att = np.array([0,-np.pi/3,np.pi/4])
+    init_att = np.array([0,-np.pi/2,0])
     init_angvel = np.array([0,0,0])
     init_angacc = np.array([0,0,0])
-    init_tvcang = np.array([0*np.pi/180,0])
+    init_tvcang = np.array([0,0])
     is_burning = 0
-    sensor_rate = 20
+    sensor_rate = 30
 
     S = Simulator(dt,
                   m0,
