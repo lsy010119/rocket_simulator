@@ -24,7 +24,9 @@ class Simulator:
                     init_att,
                     init_angvel,
                     init_angacc,
-                    init_tvcang):
+                    init_tvcang,
+                    is_burning,
+                    sensor_rate):
 
         # init datas
         self.dt = dt
@@ -42,6 +44,8 @@ class Simulator:
         self.angvel = init_angvel
         self.angacc = init_angacc
         self.tvcang = init_tvcang
+        self.is_burning = 0
+        self.sensor_rate = sensor_rate
         
         # load the modules for transformation and visualizing
         self.tf = Transformer()
@@ -50,7 +54,7 @@ class Simulator:
         # init publisher node as a sensor
         rospy.init_node("sensor")
         self.sensors = rospy.Publisher("sensor_data",Float32MultiArray, queue_size=1) 
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(self.sensor_rate)
 
     def mass(self,t):
         if self.time <= self.t_b:
@@ -101,6 +105,8 @@ class Simulator:
         odometry_cog = self.pos
         odometry_bot = self.pos
 
+        self.is_burning = 1
+
         while not rospy.is_shutdown():
 
             # update time and iterations
@@ -112,7 +118,7 @@ class Simulator:
             """ Considering Thrust ====================================================="""
 
             if self.time > self.t_b: # No thrust after burn out
-                
+                self.is_burning = 0
                 Thrust_body = np.array([0,0,0])    
 
             else:  
@@ -200,7 +206,7 @@ class Simulator:
                 self.angacc = np.zeros(3)
 
             # packing sensor datas to a single 1-dim array
-            packed_data = np.hstack((self.pos,self.vel,self.att,self.angvel,self.angacc))
+            packed_data = np.hstack((self.pos,self.vel,self.att,self.angvel,self.angacc,self.is_burning))
             # publishing sensor datas in every interations
             sensor_datas = Float32MultiArray()
             sensor_datas.data = packed_data
@@ -226,17 +232,24 @@ class Simulator:
                        top_pos[1]-bot_pos[1],
                        top_pos[2]-bot_pos[2],
                        length=10,linewidth=3,arrow_length_ratio=0,color='black')
+            if self.is_burning == 1:
+                ax.quiver(bot_pos[0],bot_pos[1],bot_pos[2],
+                        - 5*Thrust_xyz[0]/self.thrust[i-1],
+                        - 5*Thrust_xyz[1]/self.thrust[i-1],
+                        - 5*Thrust_xyz[2]/self.thrust[i-1],
+                       length=10,linewidth=2,arrow_length_ratio=0,color='red')
+
 
             odometry_top = np.vstack((odometry_top,top_pos))
             odometry_cog = np.vstack((odometry_cog,self.pos))
             odometry_bot = np.vstack((odometry_bot,bot_pos))
 
 
-            ax.plot(odometry_top[:,0],odometry_top[:,1],odometry_top[:,2],'r-')
-            ax.plot(odometry_cog[:,0],odometry_cog[:,1],odometry_cog[:,2],'g-')
-            ax.plot(odometry_bot[:,0],odometry_bot[:,1],odometry_bot[:,2],'b-')
+            ax.plot(odometry_top[:,0],odometry_top[:,1],odometry_top[:,2],'r-',linewidth=0.5)
+            ax.plot(odometry_cog[:,0],odometry_cog[:,1],odometry_cog[:,2],'g-',linewidth=0.5)
+            ax.plot(odometry_bot[:,0],odometry_bot[:,1],odometry_bot[:,2],'b-',linewidth=0.5)
 
-            plt.pause(0.01)
+            plt.pause(0.001)
             self.rate.sleep()
         
         # self.vz.run(pos_hist[1:,:], att_hist[1:,:])
@@ -301,7 +314,7 @@ if __name__ == "__main__":
     l_cogf = 1.05
     L = 2
     D = 0.2
-    thrust = np.array([1,2,3,4,5,6,7,8,9,10,10,10,8,6,4,2,0,0,0,0])*30
+    thrust = np.array([1,2,3,4,5,6,7,8,9,10,10,10,8,6,4,2,1,1,1,1])*30
     k = 0.02
     init_pos = np.array([0,0,0])
     init_vel = np.array([0,0,0])
@@ -310,6 +323,8 @@ if __name__ == "__main__":
     init_angvel = np.array([0,0,0])
     init_angacc = np.array([0,0,0])
     init_tvcang = np.array([0*np.pi/180,0])
+    is_burning = 0
+    sensor_rate = 20
 
     S = Simulator(dt,
                   m0,
@@ -327,5 +342,7 @@ if __name__ == "__main__":
                   init_att,
                   init_angvel,
                   init_angacc,
-                  init_tvcang)
+                  init_tvcang,
+                  is_burning,
+                  sensor_rate)
     S.run()

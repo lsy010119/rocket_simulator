@@ -1,6 +1,6 @@
 import numpy as np
 import rospy
-import time 
+import asyncio
 
 from sensor import Sensor
 
@@ -17,6 +17,9 @@ class Master:
         self.tvcang = np.zeros(2)
         self.time = 0
 
+
+    def sensor_on(self):
+        
 
     def main(self):
 
