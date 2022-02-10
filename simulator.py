@@ -84,14 +84,7 @@ class Simulator:
 
     def run(self):
 
-        pos_hist = np.array([0,0,0])
-        vel_hist = np.array([0,0,0])
-        acc_hist = np.array([0,0,0])
-        att_hist = np.array([0,0,0])
-        angvel_hist = np.array([0,0,0])
-        angacc_hist = np.array([0,0,0])
-        i = 0
-
+        # INITIALIZE FIGURE =================================================
         fig = plt.figure()
         ax = Axes3D(fig)
         ax.set_xlim(-500,500)
@@ -105,6 +98,8 @@ class Simulator:
         odometry_cog = self.pos
         odometry_bot = self.pos
 
+        
+        # Ignite
         self.is_burning = 1
 
         while not rospy.is_shutdown():
@@ -190,7 +185,7 @@ class Simulator:
  
                 Torque_by_drag = np.cross(c2t, drag_top) + np.cross(c2b, drag_bot)
 
-
+            # Updating Dynamic status
             self.acc = ( Thrust_xyz + Drag ) / self.mass(self.time) - np.array([0, 0, 9.8])
             self.pos = self.pos + self.vel * self.dt + 0.5 * self.acc * (self.dt**2)
             self.vel = self.vel + self.acc * self.dt
@@ -199,26 +194,21 @@ class Simulator:
             self.att = self.att + self.angvel * self.dt + 0.5 * self.angacc * (self.dt**2)
             self.angvel = self.angvel + self.angacc * self.dt
 
-            if self.pos[2] <= 0:
+            if self.pos[2] <= 0: # stop the rocket if it collides with ground
                 self.acc = np.zeros(3)
                 self.vel = np.zeros(3)
                 self.angvel = np.zeros(3)
                 self.angacc = np.zeros(3)
 
             # packing sensor datas to a single 1-dim array
-            packed_data = np.hstack((self.pos,self.vel,self.att,self.angvel,self.angacc,self.is_burning))
+            packed_data = np.hstack((self.pos,self.vel,self.att,self.angvel,self.angacc,self.is_burning,self.time))
             # publishing sensor datas in every interations
             sensor_datas = Float32MultiArray()
             sensor_datas.data = packed_data
             self.sensors.publish(sensor_datas)
 
-            # pos_hist = np.vstack((pos_hist,self.pos)) 
-            # vel_hist = np.vstack((vel_hist,self.vel)) 
-            # acc_hist = np.vstack((acc_hist,self.acc)) 
-            # att_hist = np.vstack((att_hist,self.att)) 
-            # angvel_hist = np.vstack((angvel_hist,self.angvel)) 
-            # angacc_hist = np.vstack((angacc_hist,self.angacc)) 
   
+            # VISUALIZING ================================================
             top_pos = self.pos + T @ np.array([0.5 * 5 , 0 , 0])
             bot_pos = self.pos + T @ np.array([-0.5 * 5, 0 , 0])
 
@@ -249,61 +239,13 @@ class Simulator:
             ax.plot(odometry_cog[:,0],odometry_cog[:,1],odometry_cog[:,2],'g-',linewidth=0.5)
             ax.plot(odometry_bot[:,0],odometry_bot[:,1],odometry_bot[:,2],'b-',linewidth=0.5)
 
-            plt.pause(0.001)
+            plt.pause(0.01)
             self.rate.sleep()
         
-        # self.vz.run(pos_hist[1:,:], att_hist[1:,:])
-        
-        """
-        position = plt.subplot(3,2,1)
-        velocity = plt.subplot(3,2,3)
-        acceleration = plt.subplot(3,2,5)
-        attitude = plt.subplot(3,2,2)
-        angularvel = plt.subplot(3,2,4)
-        angularacc = plt.subplot(3,2,6)
-
-        position.plot(np.arange(len(pos_hist)),pos_hist[:,0],'r-',label='x')
-        position.plot(np.arange(len(pos_hist)),pos_hist[:,1],'g-',label='y')
-        position.plot(np.arange(len(pos_hist)),pos_hist[:,2],'b-',label='z')
-
-        velocity.plot(np.arange(len(vel_hist)),vel_hist[:,0],'r-',label='x')
-        velocity.plot(np.arange(len(vel_hist)),vel_hist[:,1],'g-',label='y')
-        velocity.plot(np.arange(len(vel_hist)),vel_hist[:,2],'b-',label='z')
-
-        acceleration.plot(np.arange(len(acc_hist)),acc_hist[:,0],'r-',label='x')
-        acceleration.plot(np.arange(len(acc_hist)),acc_hist[:,1],'g-',label='y')
-        acceleration.plot(np.arange(len(acc_hist)),acc_hist[:,2],'b-',label='z')
-
-        attitude.plot(np.arange(len(att_hist)),att_hist[:,0],'r-',label='roll')
-        attitude.plot(np.arange(len(att_hist)),att_hist[:,1],'g-',label='pitch')
-        attitude.plot(np.arange(len(att_hist)),att_hist[:,2],'b-',label='yaw')
-
-        angularvel.plot(np.arange(len(angvel_hist)),angvel_hist[:,0],'r-',label='roll')
-        angularvel.plot(np.arange(len(angvel_hist)),angvel_hist[:,1],'g-',label='pitch')
-        angularvel.plot(np.arange(len(angvel_hist)),angvel_hist[:,2],'b-',label='yaw')
-
-        angularacc.plot(np.arange(len(angacc_hist)),angacc_hist[:,0],'r-',label='roll')
-        angularacc.plot(np.arange(len(angacc_hist)),angacc_hist[:,1],'g-',label='pitch')
-        angularacc.plot(np.arange(len(angacc_hist)),angacc_hist[:,2],'b-',label='yaw')
 
 
-        position.legend()
-        velocity.legend()
-        acceleration.legend()
-        attitude.legend()
-        angularvel.legend()
-        angularacc.legend()
-
-        # position.title('position')
-        # velocity.title('velocity')
-        # acceleration.title('acceleration')
-        # attitude.title('attitude')
-        # angularvel.title('angular vel')
-        # angularacc.title('angular acc')
 
 
-        plt.show()
-        """
 
 if __name__ == "__main__":
     dt = 0.1
