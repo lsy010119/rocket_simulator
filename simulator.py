@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import rospy
 
+from mpl_toolkits.mplot3d import axes3d, Axes3D
 from std_msgs.msg import Float32MultiArray
 from transform import Transformer
 from visualize import Visualizer
@@ -86,6 +87,19 @@ class Simulator:
         angvel_hist = np.array([0,0,0])
         angacc_hist = np.array([0,0,0])
         i = 0
+
+        fig = plt.figure()
+        ax = Axes3D(fig)
+        ax.set_xlim(-500,500)
+        ax.set_ylim(-500,500)
+        ax.set_zlim(0,1000)
+        ax.quiver(0,0,0,1,0,0,length=2,arrow_length_ratio=0,color='red')
+        ax.quiver(0,0,0,0,1,0,length=2,arrow_length_ratio=0,color='green')
+        ax.quiver(0,0,0,0,0,1,length=2,arrow_length_ratio=0,color='blue')
+
+        odometry_top = self.pos
+        odometry_cog = self.pos
+        odometry_bot = self.pos
 
         while not rospy.is_shutdown():
 
@@ -192,19 +206,43 @@ class Simulator:
             sensor_datas.data = packed_data
             self.sensors.publish(sensor_datas)
 
-            pos_hist = np.vstack((pos_hist,self.pos)) 
-            vel_hist = np.vstack((vel_hist,self.vel)) 
-            acc_hist = np.vstack((acc_hist,self.acc)) 
-            att_hist = np.vstack((att_hist,self.att)) 
-            angvel_hist = np.vstack((angvel_hist,self.angvel)) 
-            angacc_hist = np.vstack((angacc_hist,self.angacc)) 
+            # pos_hist = np.vstack((pos_hist,self.pos)) 
+            # vel_hist = np.vstack((vel_hist,self.vel)) 
+            # acc_hist = np.vstack((acc_hist,self.acc)) 
+            # att_hist = np.vstack((att_hist,self.att)) 
+            # angvel_hist = np.vstack((angvel_hist,self.angvel)) 
+            # angacc_hist = np.vstack((angacc_hist,self.angacc)) 
   
+            top_pos = self.pos + T @ np.array([0.5 * 5 , 0 , 0])
+            bot_pos = self.pos + T @ np.array([-0.5 * 5, 0 , 0])
+
+            ax.cla()
+            ax.set_xlim(0,800)
+            ax.set_ylim(0,800)
+            ax.set_zlim(0,800)
+            
+            ax.quiver(bot_pos[0],bot_pos[1],bot_pos[2],
+                       top_pos[0]-bot_pos[0],
+                       top_pos[1]-bot_pos[1],
+                       top_pos[2]-bot_pos[2],
+                       length=10,linewidth=3,arrow_length_ratio=0,color='black')
+
+            odometry_top = np.vstack((odometry_top,top_pos))
+            odometry_cog = np.vstack((odometry_cog,self.pos))
+            odometry_bot = np.vstack((odometry_bot,bot_pos))
+
+
+            ax.plot(odometry_top[:,0],odometry_top[:,1],odometry_top[:,2],'r-')
+            ax.plot(odometry_cog[:,0],odometry_cog[:,1],odometry_cog[:,2],'g-')
+            ax.plot(odometry_bot[:,0],odometry_bot[:,1],odometry_bot[:,2],'b-')
+
             if self.time >= 10:  
                 break
-            change 2
+
+            plt.pause(0.01)
             self.rate.sleep()
         
-        self.vz.run(pos_hist[1:,:], att_hist[1:,:])
+        # self.vz.run(pos_hist[1:,:], att_hist[1:,:])
         
         """
         position = plt.subplot(3,2,1)
